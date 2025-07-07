@@ -1,0 +1,10 @@
+# Python dependencies (e.g., fastapi, uvicorn, asyncpg, qdrant-client, sentence-transformers, pydantic)
+fastapi
+uvicorn
+asyncpg
+qdrant-client[fastembed]
+pydantic
+pydantic-settings
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
