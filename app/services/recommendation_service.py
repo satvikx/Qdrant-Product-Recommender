@@ -1,3 +1,4 @@
+from pprint import pprint
 from app.config import settings
 from qdrant_client import QdrantClient, models
 from app.utils.logging import logger
@@ -60,6 +61,17 @@ class RecommendationService:
                 limit=limit,
                 query_filter=query_filter,
             )
+
+            # similar_results = self.client.recommend(
+            #     collection_name=self.collection_name,
+            #     positive=[query_id],
+            #     limit=limit,
+            #     query_filter=query_filter,
+            #     with_payload=True,
+            #     with_vectors=False,  # We don't need the vectors back
+            # )
+
+            pprint(similar_results)
 
             # Format similar products
             similar_products = []

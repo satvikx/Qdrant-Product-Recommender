@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     try:
         # --- Startup Logic ---
         # client = await QdrantClient(settings.QDRANT_URL, port=settings.QDRANT_PORT)
-        db = db_manager.get_connection()
+        await db_manager.create_pool()
         logger.info("Database and Qdrant clients initialized.")
 
         yield  # This is where the application starts serving requests

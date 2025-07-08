@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     def __init__(self):
         self.client = QdrantClient(settings.QDRANT_URL, port=settings.QDRANT_PORT)
+        self.model_name = settings.MODEL_NAME
         self.client.set_model(settings.MODEL_NAME)
         self.collection_name = settings.COLLECTION_NAME
         logger.info(f"Initialized EmbeddingService with model: {settings.MODEL_NAME}")
@@ -115,16 +116,17 @@ class EmbeddingService:
         """Get collection information"""
         try:
             info = self.client.get_collection(self.collection_name)
+            info_detail = info.config.params.vectors["fast-bge-small-en-v1.5"]
             return {
                 "collection_name": self.collection_name,
                 "points_count": info.points_count,
                 "vector_size": (
-                    info.config.params.vectors["fast-bge-small-en-v1.5"]
+                    info_detail.size
                     if hasattr(info.config.params, "vectors")
                     else "unknown"
                 ),
                 "distance_metric": (
-                    str(info.config.params.vectors.distance)
+                    str(info_detail.distance)
                     if hasattr(info.config.params, "vectors")
                     else "unknown"
                 ),

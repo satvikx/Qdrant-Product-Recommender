@@ -183,7 +183,7 @@ class SyncService:
                     FROM products_new
                     WHERE qdrant_indexed = FALSE OR qdrant_indexed IS NULL
                     ORDER BY product_id
-                    LIMIT 100
+                    LIMIT 10
                     """
 
                 rows = await conn.fetch(query)
