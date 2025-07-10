@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, Dict
 from datetime import datetime
+from uuid import UUID
 
 
 class HealthResponse(BaseModel):
@@ -10,7 +11,7 @@ class HealthResponse(BaseModel):
 
 
 class Product(BaseModel):
-    product_id: str
+    product_id: UUID
     name: str
     category: str
     description: str
@@ -23,7 +24,7 @@ class Product(BaseModel):
 
 
 class ProductForEmbedding(BaseModel):
-    product_id: str
+    product_id: UUID
     name: str
     category: str
     description: str
@@ -43,6 +44,6 @@ class ProductForEmbedding(BaseModel):
 
 
 class ProductUpdate(BaseModel):
-    product_id: str
+    product_id: UUID
     qdrant_indexed: bool
     qdrant_indexed_at: datetime

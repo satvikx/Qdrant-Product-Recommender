@@ -4,6 +4,8 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
+
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
     # Database settings
     POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
     POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", "5432"))

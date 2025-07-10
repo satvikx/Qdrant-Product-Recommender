@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from uuid import UUID
 
 
 class ProductRecommendation(BaseModel):
-    product_id: int
+    product_id: UUID
     name: str
     category: str
     brand: str
@@ -13,7 +14,7 @@ class ProductRecommendation(BaseModel):
 
 
 class SimilarProductsRequest(BaseModel):
-    product_id: int = Field(
+    product_id: str = Field(
         ..., description="Product ID (int) to find similar products for"
     )
     limit: int = Field(
@@ -35,7 +36,7 @@ class SemanticQueryRequest(BaseModel):
 class SimilarProductsResponse(BaseModel):
     success: bool
     message: str
-    reference_product: int
+    reference_product: str
     similar_products: List[ProductRecommendation]
     total_found: int
 

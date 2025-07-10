@@ -19,6 +19,31 @@ class RecommendationService:
             f"Initialized Qdrant client with collection: {self.collection_name} with model {self.model_name}"
         )
 
+    def _build_query_filter(self, category_filter: Optional[str] = None,
+        brand_filter: Optional[str] = None):
+            # Build query filter
+        try:
+            query_filter = None
+            must_conditions = []
+
+            if category_filter:
+                must_conditions.append(
+                    {"key": "category", "match": {"value": category_filter}}
+                )
+            if brand_filter:
+                must_conditions.append(
+                    {"key": "brand", "match": {"value": brand_filter}}
+                )
+
+            if must_conditions:
+                query_filter = {"must": must_conditions}
+
+            return query_filter
+
+        except Exception as e:
+            logger.error("Error buiding query filter")
+
+
     async def get_similar_products_by_id(
         self,
         product_id: str,
@@ -32,27 +57,7 @@ class RecommendationService:
         try:
             query_id = product_id
 
-            # Build query filter for excluding the reference product
-            must_not_filter = [{"key": "product_id", "match": {"value": product_id}}]
-
-            # Build additional filters
-            must_filter = []
-            if category_filter:
-                must_filter.append(
-                    {"key": "category", "match": {"value": category_filter}}
-                )
-            if brand_filter:
-                must_filter.append({"key": "brand", "match": {"value": brand_filter}})
-
-            # Create filter object
-            query_filter = None
-            if must_filter or must_not_filter:
-                filter_conditions = {}
-                if must_filter:
-                    filter_conditions["must"] = must_filter
-                if must_not_filter:
-                    filter_conditions["must_not"] = must_not_filter
-                query_filter = filter_conditions
+            query_filter = self._build_query_filter(category_filter=category_filter, brand_filter=brand_filter)
 
             # Query vector database directly using product ID
             similar_results = self.client.query_points(
@@ -71,7 +76,7 @@ class RecommendationService:
             #     with_vectors=False,  # We don't need the vectors back
             # )
 
-            pprint(similar_results)
+            # pprint(similar_results)
 
             # Format similar products
             similar_products = []
@@ -120,17 +125,13 @@ class RecommendationService:
         """
         try:
             # Build query filter
-            query_filter = {}
-            if category_filter:
-                query_filter["category"] = category_filter
-            if brand_filter:
-                query_filter["brand"] = brand_filter
+            query_filter = self._build_query_filter(category_filter=category_filter, brand_filter=brand_filter)
 
             search_results = self.client.query_points(
                 collection_name=self.collection_name,
                 query=Document(text=query, model=self.model_name),
                 limit=limit,
-                query_filter=query_filter if query_filter else None,
+                query_filter=query_filter,
             ).points
 
             # Format results

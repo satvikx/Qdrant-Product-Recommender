@@ -7,8 +7,7 @@ from app.database import db_manager
 from app.services.embedding_service import EmbeddingService
 from app.models.product import Product, ProductForEmbedding, ProductUpdate
 from app.models.sync import SyncStatus, SyncResponse
-
-logger = logging.getLogger(__name__)
+from app.utils.logging import logger
 
 
 class SyncService:
@@ -183,7 +182,7 @@ class SyncService:
                     FROM products_new
                     WHERE qdrant_indexed = FALSE OR qdrant_indexed IS NULL
                     ORDER BY product_id
-                    LIMIT 10
+                    LIMIT 1000
                     """
 
                 rows = await conn.fetch(query)

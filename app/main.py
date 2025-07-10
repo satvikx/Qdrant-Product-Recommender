@@ -22,13 +22,13 @@ async def lifespan(app: FastAPI):
         # --- Startup Logic ---
         # client = await QdrantClient(settings.QDRANT_URL, port=settings.QDRANT_PORT)
         await db_manager.create_pool()
-        logger.info("Database and Qdrant clients initialized.")
+        logger.info("✅ Database client initialized.")
 
         yield  # This is where the application starts serving requests
 
     except Exception as e:
         logger.exception(
-            "Failed to initialize application services during startup. Application may not function correctly."
+            "❌ Failed to initialize application services during startup. Application may not function correctly."
         )
 
     finally:
@@ -44,7 +44,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    lifespan=lifespan,  # Pass the lifespan context manager here
+    lifespan=lifespan,
 )
 
 # Add CORS middleware

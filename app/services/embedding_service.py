@@ -1,30 +1,36 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance, VectorParams, Batch
 from typing import List, Dict, Optional
 import logging
 from app.config import settings
 from app.models.product import ProductForEmbedding
-
-logger = logging.getLogger(__name__)
+from app.utils.logging import logger
+from fastembed import TextEmbedding
 
 
 class EmbeddingService:
     def __init__(self):
         self.client = QdrantClient(settings.QDRANT_URL, port=settings.QDRANT_PORT)
         self.model_name = settings.MODEL_NAME
-        self.client.set_model(settings.MODEL_NAME)
+        # self.client.set_model(settings.MODEL_NAME)
         self.collection_name = settings.COLLECTION_NAME
-        logger.info(f"Initialized EmbeddingService with model: {settings.MODEL_NAME}")
+        self.embedding_model = TextEmbedding(
+            model_name=self.model_name, cache_dir=".cache"
+        )
+        logger.info(f"Initialized EmbeddingService with model: {self.model_name}")
 
     async def ensure_collection_exists(self):
         """Ensure collection exists, create if not"""
         try:
-            collections = self.client.get_collections().collections
-            collection_names = [col.name for col in collections]
-
-            if self.collection_name not in collection_names:
-                logger.info(f"Creating collection: {self.collection_name}")
-                # Let FastEmbed handle collection creation automatically
+            if not self.client.collection_exists(collection_name=self.collection_name):
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(
+                        size=self.client.get_embedding_size(self.model_name),
+                        distance=Distance.COSINE,
+                    ),
+                )
+                logger.info(f"Created Collection : {self.collection_name}")
                 return True
 
             logger.info(f"Collection {self.collection_name} already exists")
@@ -33,7 +39,75 @@ class EmbeddingService:
             logger.error(f"Error ensuring collection exists: {e}")
             return False
 
+    def get_embeddings(self, documents: List[str]) -> List[List[float]]:
+        """
+        Generate vector embeddings using fastembed.TextEmbedding
+        """
+        try:
+            # embed() returns a generator
+            return list(self.embedding_model.embed(documents))
+        except Exception as e:
+            logger.error(f"Embedding generation failed: {e}")
+            return []
+
     async def add_products_to_vector_db(
+        self, products: List["ProductForEmbedding"]
+    ) -> tuple[List[str], List[str]]:
+        """
+        Upsert products into Qdrant using batch operation.
+        Returns: (successful_ids, failed_ids)
+        """
+        successful_ids = []
+        failed_ids = []
+
+        if not products:
+            return successful_ids, failed_ids
+
+        try:
+            documents = []
+            payloads = []
+            ids = []
+
+            for product in products:
+                try:
+                    doc_text = product.to_text()
+                    documents.append(doc_text)
+                    payloads.append(
+                        {
+                            "product_id": product.product_id,
+                            "name": product.name,
+                            "category": product.category,
+                            "brand": product.brand,
+                            "type": product.type,
+                            "description": product.description,
+                        }
+                    )
+                    ids.append(str(product.product_id))
+                except Exception as e:
+                    logger.error(f"Error preparing product {product.product_id}: {e}")
+                    failed_ids.append(product.product_id)
+
+            # Generate embeddings using fastembed
+            vectors = self.get_embeddings(documents)
+
+            if vectors:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=Batch(ids=ids, vectors=vectors, payloads=payloads),
+                )
+                successful_ids.extend([pid for pid in ids if pid not in failed_ids])
+                logger.info(
+                    f"Successfully upserted {len(successful_ids)} products to Qdrant"
+                )
+        except Exception as e:
+            logger.error(f"Error during Qdrant upsert: {e}")
+            failed_ids.extend(
+                [p.product_id for p in products if p.product_id not in failed_ids]
+            )
+
+        return successful_ids, failed_ids
+
+    async def add_products_to_vector_db_old(
         self, products: List[ProductForEmbedding]
     ) -> tuple[List[str], List[str]]:
         """
@@ -65,11 +139,12 @@ class EmbeddingService:
                             "description": product.description,
                         }
                     )
+                    ids.append(product.product_id)
                     # Convert to int if possible, otherwise use string
-                    try:
-                        ids.append(int(product.product_id))
-                    except ValueError:
-                        ids.append(product.product_id)
+                    # try:
+                    #     ids.append(int(product.product_id))
+                    # except ValueError:
+                    #     ids.append(product.product_id)
                 except Exception as e:
                     logger.error(f"Error preparing product {product.product_id}: {e}")
                     failed_ids.append(product.product_id)
@@ -116,7 +191,7 @@ class EmbeddingService:
         """Get collection information"""
         try:
             info = self.client.get_collection(self.collection_name)
-            info_detail = info.config.params.vectors["fast-bge-small-en-v1.5"]
+            info_detail = info.config.params.vectors
             return {
                 "collection_name": self.collection_name,
                 "points_count": info.points_count,
