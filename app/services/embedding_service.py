@@ -7,6 +7,8 @@ from app.models.product import ProductForEmbedding
 from app.utils.logging import logger
 from fastembed import TextEmbedding
 
+import google.generativeai as genai
+
 
 class EmbeddingService:
     def __init__(self):
@@ -18,6 +20,7 @@ class EmbeddingService:
             model_name=self.model_name, cache_dir=".cache"
         )
         logger.info(f"Initialized EmbeddingService with model: {self.model_name}")
+        # genai.configure(api_key="AIzaSyAEnN3M1Ugw-uVyt5BdtQ8lziogsNCcwjw")
 
     async def ensure_collection_exists(self):
         """Ensure collection exists, create if not"""
@@ -49,6 +52,26 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             return []
+
+    # TODO: This was just for experimentation and is not called elsewhere
+    def get_embeddings_gemini(self, documents: list[str]) -> list[list[float]]:
+        """
+        Generate embeddings using Google Gemini Embeddings API authenticated via API key.
+        """
+        try:
+            response = genai.embed_content(
+                model="gemini-embedding-001",
+                content=documents,
+                task_type="SEMANTIC_SIMILARITY",
+                output_dimensionality=384,
+            )
+            embeddings = [list(item) for item in response["embedding"]]
+            print(f"Generated {len(embeddings)} embeddings with gemini.")
+            return embeddings
+
+        except Exception as e:
+            logger.error(f"Embedding generation failed with Google Gemini API: {e}")
+            raise
 
     async def add_products_to_vector_db(
         self, products: List["ProductForEmbedding"]
@@ -88,7 +111,11 @@ class EmbeddingService:
                     failed_ids.append(product.product_id)
 
             # Generate embeddings using fastembed
-            vectors = self.get_embeddings(documents)
+            try:
+                vectors = self.get_embeddings(documents)
+
+            except Exception as e:
+                logger.error("Failed to generate the embeddings : " + e)
 
             if vectors:
                 self.client.upsert(

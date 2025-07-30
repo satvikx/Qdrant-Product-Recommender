@@ -70,6 +70,7 @@ async def root():
         "endpoints": {
             "health": "/health",
             "similar_products": "/api/v1/products/similar",
+            "similar_products_from_list": "/api/v1/products/similar/list",
             "semantic_search": "/api/v1/products/search",
             "admin_sync": "/api/v1/admin/sync",
             "admin_sync_status": "/api/v1/admin/sync/status",

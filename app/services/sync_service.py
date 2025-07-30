@@ -167,6 +167,8 @@ class SyncService:
     async def get_products_to_sync(self, force_reindex: bool = False) -> List[dict]:
         """Get products that need to be synced"""
         try:
+            # TODO : Remove Limits
+
             async with db_manager.get_connection() as conn:
                 if force_reindex:
                     query = """
@@ -174,6 +176,7 @@ class SyncService:
                            qdrant_indexed, qdrant_indexed_at
                     FROM products_new
                     ORDER BY product_id
+                    LIMIT 10
                     """
                 else:
                     query = """
@@ -182,7 +185,7 @@ class SyncService:
                     FROM products_new
                     WHERE qdrant_indexed = FALSE OR qdrant_indexed IS NULL
                     ORDER BY product_id
-                    LIMIT 1000
+                    LIMIT 10
                     """
 
                 rows = await conn.fetch(query)

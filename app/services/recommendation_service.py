@@ -43,7 +43,6 @@ class RecommendationService:
         except Exception as e:
             logger.error("Error buiding query filter")
 
-
     async def get_similar_products_by_id(
         self,
         product_id: str,
@@ -109,6 +108,68 @@ class RecommendationService:
                 "success": False,
                 "message": f"Error retrieving similar products: {str(e)}",
                 "reference_product": None,
+                "similar_products": [],
+                "total_found": 0,
+            }
+        
+    async def get_similar_products_from_list_of_ids(
+        self,
+        product_ids: List[str],
+        limit: int = 10,
+        category_filter: Optional[str] = None,
+        brand_filter: Optional[str] = None,
+    ) -> Dict:
+        """
+        Get products similar to a given product IDs by querying vector database directly
+        """
+        try:
+            query_ids = product_ids
+
+            query_filter = self._build_query_filter(category_filter=category_filter, brand_filter=brand_filter)
+
+            # Query vector database directly using product ID
+            similar_results = self.client.recommend(
+                collection_name=self.collection_name,
+                positive=query_ids,
+                limit=limit,
+                query_filter=query_filter,
+                with_payload=True,
+                with_vectors=False
+            )
+
+            # pprint(similar_results)
+
+            # Format similar products
+            similar_products = []
+            for result in similar_results:
+                recommendation = ProductRecommendation(
+                    product_id=result.payload["product_id"],
+                    name=result.payload["name"],
+                    category=result.payload["category"],
+                    brand=result.payload["brand"],
+                    type=result.payload["type"],
+                    description=result.payload["description"],
+                    similarity_score=(
+                        float(result.score) if hasattr(result, "score") else 0.0
+                    ),
+                )
+                similar_products.append(recommendation)
+
+            return {
+                "success": True,
+                # "time": similar_results.time,
+                "message": f"Found {len(similar_products)} similar products",
+                "reference_products": query_ids,
+                "similar_products": similar_products,
+                "total_found": len(similar_products),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting similar products: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Error retrieving similar products: {str(e)}",
+                "reference_products": None,
                 "similar_products": [],
                 "total_found": 0,
             }
