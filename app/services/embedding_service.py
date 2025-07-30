@@ -20,7 +20,7 @@ class EmbeddingService:
             model_name=self.model_name, cache_dir=".cache"
         )
         logger.info(f"Initialized EmbeddingService with model: {self.model_name}")
-        # genai.configure(api_key="AIzaSyAEnN3M1Ugw-uVyt5BdtQ8lziogsNCcwjw")
+        # genai.configure(api_key="")
 
     async def ensure_collection_exists(self):
         """Ensure collection exists, create if not"""
